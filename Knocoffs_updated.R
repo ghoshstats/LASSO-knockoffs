@@ -156,12 +156,3 @@ for (i in 1:length(l)) {
 results_df <- do.call(rbind, results_list)
 results_df
 write.csv(results_df,file="FDR_StarGraph_upk.csv", row.names = TRUE)
-
-
-
-
-
-#stat.lasso_coefdiff.bin()<-for binary
-#T <- knockoff.threshold()
-
-
