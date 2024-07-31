@@ -110,20 +110,6 @@ mean_FDR_TPR <- function(n, N, p, type, params = NULL, FDR) {
   return(result)
 }
 
-#0.01
-l=c(0.01,0.05,0.10,0.15,0.2)
-results_list <- list()
-for (i in 1:2){
-  k<-mean_FDR_TPR(200,100,400,type="AR1",params=list(rho=0.8),FDR=l[i])
-  results_list[[as.character(i)]] <- k
-}
-results_list
-results_df <- do.call(rbind, results_list)
-results_df
-write.csv(results_df,file="FDR_AR1_LR.csv", row.names = TRUE) 
-results_df
-read.csv("FDR_AR1_LR.csv")
-
 
 l=c(0.01,0.05,0.10,0.15,0.2)
 results_list <- list()
@@ -153,19 +139,6 @@ for (i in 1:length(l)) {
 }
 results_df <- do.call(rbind, results_list)
 write.csv(results_df,file="FDR_SmallWorld_LR.csv", row.names = TRUE)
-
-#0.05,0.15
-l=c(0.05,0.15)
-results_list <- list()
-for (i in 1:length(l)) {
-  k<-mean_FDR_TPR(200,100,400,type="StarGraph",params=list(rho=0.8),FDR=l[i])
-  results_list[[as.character(i)]] <- k
-}
-results_list
-results_df <- do.call(rbind, results_list)
-results_df
-write.csv(results_df,file="FDR_StarGraph_LR.csv", row.names = TRUE)
-
 
 l=c(0.01,0.05,0.10,0.15,0.2)
 results_list <- list()
