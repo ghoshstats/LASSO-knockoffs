@@ -80,10 +80,11 @@ kosel_update <- function(W,fdr){
   return(T)
 }
 
-mean_FDR_TPR <- function(n, N, p, type, params = NULL, FDR) {
+mean_FDR_TPR <- function(n, N, p, type, params = NULL) {
   beta <- generate_nonzero_vector(p)  # Assuming this function generates a non-zero vector of length p
-  FDR_values <- numeric(N)  # Initialize an empty numeric vector to store FDR values
-  TPR_values <- numeric(N)  # Initialize an empty numeric vector to store TPR values
+  FDR_values <- matrix(0, nrow = N, ncol = length(FDR))  # Initialize matrix for FDR values
+  TPR_values <- matrix(0, nrow = N, ncol = length(FDR))  # Initialize matrix for TPR values
+  FDR <- c(0.01, 0.05, 0.10, 0.15, 0.2)
   
   for (i in 1:N) {
     U <- generateOmega(p, type, params)[["Sigma"]]  # Generate covariance matrix or similar
@@ -94,79 +95,44 @@ mean_FDR_TPR <- function(n, N, p, type, params = NULL, FDR) {
     pi <- 1 / (1 + exp(-eta))
     y.sample <- rbinom(n, 1, pi)
     X_tilde <- create.second_order(X)
-    W <- stat.lasso_coefdiff_bin(X,X_tilde,y.sample)
-    T<- kosel_update(W,fdr=FDR)
-    selected <- which(W>=T)
+    W <- stat.lasso_coefdiff_bin(X, X_tilde, y.sample)
     
-    # Compute False Discovery Rate (FDR)
-    indices_outside_first_30 <- sum(!(selected %in% 1:30))
-    FDR_value <- indices_outside_first_30 / length(selected)
-    FDR_values[i] <- FDR_value  # Store FDR value for this iteration
-    
-    # Compute True Positive Rate (TPR)
-    true_positives <- sum(selected %in% 1:30)  # Count selected indices within 1 to 30
-    TPR_value <- true_positives / 30  # Assuming 30 as the number of true signals
-    TPR_values[i] <- TPR_value  # Store TPR value for this iteration
+    for (j in 1:length(FDR)) {
+      T <- kosel_update(W, fdr = FDR[j])
+      selected <- which(W >= T)
+      
+      # Compute False Discovery Rate (FDR)
+      indices_outside_first_30 <- sum(!(selected %in% 1:30))
+      FDR_value <- if (length(selected) == 0) 0 else indices_outside_first_30 / length(selected)
+      FDR_values[i, j] <- FDR_value  # Store FDR value for this iteration
+      
+      # Compute True Positive Rate (TPR)
+      true_positives <- sum(selected %in% 1:30)  # Count selected indices within 1 to 30
+      TPR_value <- true_positives / 30  # Assuming 30 as the number of true signals
+      TPR_values[i, j] <- TPR_value  # Store TPR value for this iteration
+    }
   }
   
-  mean_FDR <- mean(FDR_values,na.rm = TRUE)  # Compute the mean FDR over all iterations
-  mean_TPR <- mean(TPR_values,na.rm = TRUE)  # Compute the mean TPR over all iterations
+  mean_FDR <- colMeans(FDR_values, na.rm = TRUE)
+  mean_TPR <- colMeans(TPR_values, na.rm = TRUE)
   
-  result <- data.frame(FDR = mean_FDR, TPR = mean_TPR)
+  result <- data.frame(target_fdr = FDR, FDR = mean_FDR, TPR = mean_TPR)
   return(result)
 }
 
-
-l=c(0.01,0.05,0.10,0.15,0.2)
-results_list <- list()
-for (i in 1:length(l)){
-  k<-mean_FDR_TPR(200,100,400,type="AR1",params=list(rho=0.8),FDR=l[i])
-  results_list[[as.character(i)]] <- k
-}
-results_list
-results_df <- do.call(rbind, results_list)
+results_df<-mean_FDR_TPR(200,100,400,type="AR1",params=list(rho=0.8))
 results_df
-write.csv(results_df,file="FDR_AR1_LR_upk2.csv", row.names = TRUE) 
+write.csv(results_df,file="FDR_AR1_LR_upk3.csv", row.names = TRUE)
+read.csv("FDR_AR1_LR_upk3.csv")
+
+results_df<-mean_FDR_TPR(200,100,400,type="BlockDiagonal",params=list(rho=0.8))
 results_df
-read.csv("FDR_AR1_LR_upk2.csv")
+write.csv(results_df,file="FDR_BlockDiagonal_LR_upk3.csv", row.names = TRUE)
 
-l=c(0.01,0.05,0.10,0.15,0.2)
-results_list <- list()
-for (i in 1:length(l)) {
-  k<-mean_FDR_TPR(200,100,400,type="BlockDiagonal",params=list(rho=0.8),FDR=l[i])
-  results_list[[as.character(i)]] <- k
-}
-results_df <- do.call(rbind, results_list)
+results_df<-mean_FDR_TPR(200,100,400,type="SmallWorld",params=list(rhos=c(0.8,0.7,0.6)))
 results_df
-write.csv(results_df,file="FDR_BlockDiagonal_LR_upk2.csv", row.names = TRUE)
+write.csv(results_df,file="FDR_SmallWorld_LR_upk3.csv", row.names = TRUE)
 
-l=c(0.01,0.05,0.10,0.15,0.2)
-results_list <- list()
-for (i in 1:length(l)) {
-  k<-mean_FDR_TPR(200,100,400,type="SmallWorld",params=list(rhos=c(0.8,0.7,0.6)),FDR=l[i])
-  results_list[[as.character(i)]] <- k
-}
-results_df <- do.call(rbind, results_list)
-write.csv(results_df,file="FDR_SmallWorld_LR_upk2.csv", row.names = TRUE)
-
-#0.05,0.15
-l=c(0.05,0.15)
-results_list <- list()
-for (i in 1:length(l)) {
-  k<-mean_FDR_TPR(200,100,400,type="StarGraph",params=list(rho=0.8),FDR=l[i])
-  results_list[[as.character(i)]] <- k
-}
-results_list
-results_df <- do.call(rbind, results_list)
+results_df<-mean_FDR_TPR(200,100,400,type="StarGraph",params=list(rho=0.8))
 results_df
-write.csv(results_df,file="FDR_StarGraph_LR_upk2.csv", row.names = TRUE)
-
-
-l=c(0.01,0.05,0.10,0.15,0.2)
-results_list <- list()
-for (i in 1:length(l)) {
-  k<-mean_FDR_TPR(200,100,400,type="StarGraph",params=list(rho=0.8),FDR=l[i])
-  results_list[[as.character(i)]] <- k
-}
-results_df <- do.call(rbind, results_list)
-write.csv(results_df,file="FDR_StarGraph_LR_upk2.csv", row.names = TRUE)
+write.csv(results_df,file="FDR_StarGraph_LR_upk3.csv", row.names = TRUE)
